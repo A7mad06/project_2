@@ -1,8 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { TodosComponent } from './components/todos/todos.component';
-import { DeletedTodoComponent } from './components/deleted-todo/deleted-todo.component';
-import { CompletedTodosComponent } from './components/completed-todos/completed-todos.component';
+import { DeletedTodosComponent } from './components/deleted-todos/deleted-todos.component';
 
 const routes: Routes = [
   {
@@ -14,12 +13,8 @@ const routes: Routes = [
     component: TodosComponent
   },
   {
-    path: 'deleted-todos',
-    component: DeletedTodoComponent
-  },
-  {
-    path: 'completed-todos',
-    component: CompletedTodosComponent
+    path: 'deletedTodos',
+    component: DeletedTodosComponent
   }
 
 ];

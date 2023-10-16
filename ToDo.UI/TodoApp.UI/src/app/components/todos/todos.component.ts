@@ -10,13 +10,14 @@ import { TodoService } from 'src/app/services/todo.service';
 export class TodosComponent  implements OnInit{
   todos: Todo[] = [];
   newTodo: Todo = {
-    id:'',
+    id: '',
     description:'',
     createdDate: new Date(),
     completedDate: new Date(),
     isCompleted: false,
     deletedDate: new Date(),
-    isDeleted : false
+    isDeleted: false,
+    categoryName: ''
 
   };
   constructor(private todoService: TodoService) {}
@@ -40,7 +41,6 @@ export class TodosComponent  implements OnInit{
       });
   }
   onCompletedChange(id: string, todo: Todo) {
-    todo.isCompleted = !todo.isCompleted;
     this.todoService.updateTodo(id, todo)
       .subscribe({
         next: (response) => {
@@ -48,10 +48,10 @@ export class TodosComponent  implements OnInit{
         }
       });
   }
-  deleteTodo(id:string) {
+  deleteTodo(id: string) {
     this.todoService.deleteTodo(id)
       .subscribe({
-        next: (response) => {
+        next: (res) => {
           this.getAllTodos();
         }
       });

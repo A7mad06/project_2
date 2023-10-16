@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using todo.API.Data;
+using System.Data.SqlClient;
+using System.Data;
 using todo.API.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace todo.API.Controllers
 {
@@ -10,98 +11,199 @@ namespace todo.API.Controllers
     [ApiController]
     public class TodoController : ControllerBase
     {
-        private readonly TodoDbContext _todoDbContext;
+        private readonly IConfiguration _configuration;
 
-        public TodoController(TodoDbContext todoDbContext)
+        public TodoController(IConfiguration config)
         {
-            _todoDbContext = todoDbContext;
+            _configuration = config;
         }
         [HttpGet]
-
         public async Task<IActionResult> GetAllTodos()
         {
-            var todos = await _todoDbContext.Todos
-                .Where(x => x.IsDeleted == false)
-                .OrderByDescending(x => x.CompletedDate)
-                .ToListAsync();
-
-            return Ok(todos);
+            SqlConnection con = new SqlConnection("Server=DESKTOP-ODD35L0\\SQLEXPRESS;Database=Todo;Trusted_Connection=true");
+            List<TodoModels> Lst = new List<TodoModels>();
+            SqlCommand cmd = new SqlCommand("Select * From Todos where IsDeleted=0", con);
+            DataTable dt = new DataTable();
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            da.Fill(dt);
+            foreach (DataRow dr in dt.Rows)
+            {
+                TodoModels obj = new TodoModels();
+                obj.Id = Guid.Parse(dr[0].ToString());
+                obj.Description = Convert.ToString(dr[1]);
+                obj.IsCompleted = Convert.ToBoolean(dr[2]);
+                obj.IsDeleted = Convert.ToBoolean(dr[3]);
+                obj.CompletedDate = Convert.ToDateTime(dr[6]);
+                obj.CreatedDate = Convert.ToDateTime(dr[4]);
+                obj.DeletedDate = Convert.ToDateTime(dr[5]);
+                obj.CategoryName = Convert.ToString(dr[7]);
+                Lst.Add(obj);
+            }
+            return Ok(Lst);
         }
         [HttpGet]
-        [Route("get-deleted-todos")]
+        [Route("deleted-todos")]
         public async Task<IActionResult> GetAllDeletedTodos()
         {
-            var todos = await _todoDbContext.Todos
-                .Where (x => x.IsDeleted == true)
-                .OrderByDescending(x => x.CreatedDate)
-                .ToListAsync();
-            return Ok(todos);
-        }
-        [HttpGet]
-        [Route("get-completed-todos")]
-
-        public async Task<IActionResult> GetAllCompletedTodos()
-        {
-            var todos = await _todoDbContext.Todos
-                .Where(x => x.IsCompleted == true)
-                .OrderByDescending(x => x.CreatedDate)
-                .ToListAsync();
-            return Ok(todos);
+            SqlConnection con = new SqlConnection("Server=DESKTOP-ODD35L0\\SQLEXPRESS;Database=Todo;Trusted_Connection=true");
+            List<TodoModels> Lst = new List<TodoModels>();
+            SqlCommand cmd = new SqlCommand("Select * From Todos where IsDeleted=1", con);
+            DataTable dt = new DataTable();
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            da.Fill(dt);
+            foreach (DataRow dr in dt.Rows)
+            {
+                TodoModels obj = new TodoModels();
+                obj.Id = Guid.Parse(dr[0].ToString());
+                obj.Description = Convert.ToString(dr[1]);
+                obj.IsCompleted = Convert.ToBoolean(dr[2]);
+                obj.IsDeleted = Convert.ToBoolean(dr[3]);
+                obj.CompletedDate = Convert.ToDateTime(dr[6]);
+                obj.CreatedDate = Convert.ToDateTime(dr[4]);
+                obj.DeletedDate = Convert.ToDateTime(dr[5]);
+                obj.CategoryName = Convert.ToString(dr[7]);
+                Lst.Add(obj);
+            }
+            return Ok(Lst);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddTodo(Todo todo)
+
+        public async Task<IActionResult> AddTodo(TodoModels todo)
         {
+            todo.CreatedDate = DateTime.Now;
+            todo.DeletedDate = DateTime.Now;
+            todo.CompletedDate = DateTime.Now;
             todo.Id = Guid.NewGuid();
-            _todoDbContext.Todos.Add(todo);
-            await _todoDbContext.SaveChangesAsync();
+            SqlConnection con = new SqlConnection("Server=DESKTOP-ODD35L0\\SQLEXPRESS;Database=Todo;Trusted_Connection=true");
+            SqlCommand cmd = new SqlCommand("insert into Todos(Id,IsCompleted,IsDeleted,CreatedDate,Description,CategoryName,DeletedDate,CompletedDate) values ('" + todo.Id + "','" + todo.IsCompleted + "','" + todo.IsDeleted + "','" + todo.CreatedDate + "','" + todo.Description + "','" + todo.CategoryName + "','" + todo.DeletedDate + "','" + todo.CompletedDate + "')", con);
+            con.Open();
+            cmd.ExecuteNonQuery();
+            con.Close();
+
             return Ok(todo);
+
         }
 
         [HttpPut]
         [Route("{id:Guid}")]
-
-        public async Task<IActionResult> UpdateTodo([FromRoute] Guid id, Todo todoUpdateRequest)
+        public async Task<IActionResult> UpdateTodo([FromRoute] Guid id, TodoModels todoUpdateRequest)
         {
-            var todo = await _todoDbContext.Todos.FindAsync(id);
-
-            if(todo == null)
-            
-                return NotFound();
-
-            todo.IsCompleted = todoUpdateRequest.IsCompleted;
-            todo.CompletedDate = DateTime.Now;
-
-
-            await _todoDbContext.SaveChangesAsync();
-            return Ok(todo);
+            SqlConnection con = new SqlConnection("Server=DESKTOP-ODD35L0\\SQLEXPRESS;Database=Todo;Trusted_Connection=true");
+            List<TodoModels> Lst = new List<TodoModels>();
+            SqlCommand cmd = new SqlCommand("Select * From Todos where Id = '" + id + "'", con);
+            DataTable dt = new DataTable();
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            da.Fill(dt);
+            TodoModels obj = new TodoModels();
+            foreach (DataRow dr in dt.Rows)
+            {
+                obj.Id = Guid.Parse(dr[0].ToString());
+                obj.Description = Convert.ToString(dr[1]);
+                obj.IsCompleted = Convert.ToBoolean(dr[2]);
+                obj.IsDeleted = Convert.ToBoolean(dr[3]);
+                obj.CompletedDate = Convert.ToDateTime(dr[6]);
+                obj.CreatedDate = Convert.ToDateTime(dr[4]);
+                obj.DeletedDate = Convert.ToDateTime(dr[5]);
+                obj.CategoryName = Convert.ToString(dr[7]);
+                Lst.Add(obj);
+            }
+            var time = DateTime.Now;
+            if(obj.IsCompleted == true)
+            {
+                SqlCommand cmd1 = new SqlCommand("Update Todos set IsCompleted=0 where Id = '" + id + "'", con);
+                con.Open();
+                cmd1.ExecuteNonQuery();
+                con.Close();
+                SqlCommand cmd4 = new SqlCommand("Update Todos set CompletedDate='"+time+"' where Id = '" + id + "'", con);
+                con.Open();
+                cmd4.ExecuteNonQuery();
+                con.Close();
+            }
+            else
+            {
+                SqlCommand cmd2 = new SqlCommand("Update Todos set IsCompleted=1 where Id = '" + id + "'", con);
+                con.Open();
+                cmd2.ExecuteNonQuery();
+                con.Close();
+                SqlCommand cmd5 = new SqlCommand("Update Todos set CompletedDate='" + time + "' where Id = '" + id + "'", con);
+                con.Open();
+                cmd5.ExecuteNonQuery();
+                con.Close();
+            }
+            obj.IsCompleted=!obj.IsCompleted;
+            obj.CompletedDate = DateTime.Now;
+            return Ok(Lst);
         }
-        [HttpDelete]
-        [Route("{id:Guid}")]
-        public async Task<IActionResult> DeleteTodo([FromRoute] Guid id)
-        {
-            var todo = await _todoDbContext.Todos.FindAsync(id);
-            if(todo == null) return NotFound();
 
-            todo.IsDeleted = true;
-            todo.DeletedDate = DateTime.Now;
-            await _todoDbContext.SaveChangesAsync();
-            return Ok(todo);
-
-        }
 
         [HttpPut]
         [Route("undo-deleted-todo/{id:Guid}")]
 
-        public async Task<IActionResult> undoDeleteTodo([FromRoute] Guid id,Todo undoDeleteTodoRequest)
+        public async Task<IActionResult> UndoDeletedTodo([FromRoute] Guid id, TodoModels todoUndoRequest)
         {
-            var todo = await _todoDbContext.Todos.FindAsync(id);
-            if(todo == null)
-                return NotFound();
-            todo.DeletedDate = null;
-            todo.IsDeleted = false;
-            await _todoDbContext.SaveChangesAsync();
-            return Ok(todo);
+            SqlConnection con = new SqlConnection("Server=DESKTOP-ODD35L0\\SQLEXPRESS;Database=Todo;Trusted_Connection=true");
+            List<TodoModels> Lst = new List<TodoModels>();
+            SqlCommand cmd = new SqlCommand("Select * From Todos where Id = '" + id + "'", con);
+            DataTable dt = new DataTable();
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            da.Fill(dt);
+            TodoModels obj = new TodoModels();
+            foreach (DataRow dr in dt.Rows)
+            {
+                obj.Id = Guid.Parse(dr[0].ToString());
+                obj.Description = Convert.ToString(dr[1]);
+                obj.IsCompleted = Convert.ToBoolean(dr[2]);
+                obj.IsDeleted = Convert.ToBoolean(dr[3]);
+                obj.CompletedDate = Convert.ToDateTime(dr[6]);
+                obj.CreatedDate = Convert.ToDateTime(dr[4]);
+                obj.DeletedDate = Convert.ToDateTime(dr[5]);
+                obj.CategoryName = Convert.ToString(dr[7]);
+                Lst.Add(obj);
+            }
+            SqlCommand cmd1 = new SqlCommand("Update Todos set IsDeleted=0 where Id = '" + id + "'", con);
+            con.Open();
+            cmd1.ExecuteNonQuery();
+            con.Close();
+            obj.IsDeleted = false;
+            return Ok(Lst);
+        }
+
+        [HttpDelete]
+        [Route("{id:Guid}")]
+        public async Task<IActionResult> DeleteTodo([FromRoute] Guid id)
+        {
+            SqlConnection con = new SqlConnection("Server=DESKTOP-ODD35L0\\SQLEXPRESS;Database=Todo;Trusted_Connection=true");
+            List<TodoModels> Lst = new List<TodoModels>();
+            SqlCommand cmd = new SqlCommand("Select * From Todos where Id = '" + id + "'", con);
+            DataTable dt = new DataTable();
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            da.Fill(dt);
+            TodoModels obj = new TodoModels();
+            foreach (DataRow dr in dt.Rows)
+            {
+                obj.Id = Guid.Parse(dr[0].ToString());
+                obj.Description = Convert.ToString(dr[1]);
+                obj.IsCompleted = Convert.ToBoolean(dr[2]);
+                obj.IsDeleted = Convert.ToBoolean(dr[3]);
+                obj.CompletedDate = Convert.ToDateTime(dr[6]);
+                obj.CreatedDate = Convert.ToDateTime(dr[4]);
+                obj.DeletedDate = Convert.ToDateTime(dr[5]);
+                obj.CategoryName = Convert.ToString(dr[7]);
+                Lst.Add(obj);
+            }
+            var time = DateTime.Now;
+            SqlCommand cmd1 = new SqlCommand("Update Todos set IsDeleted=1 where Id = '" + id + "'", con);
+            con.Open();
+            cmd1.ExecuteNonQuery();
+            con.Close();
+            SqlCommand cmd4 = new SqlCommand("Update Todos set DeletedDate='" + time + "' where Id = '" + id + "'", con);
+            con.Open();
+            cmd4.ExecuteNonQuery();
+            con.Close();
+            obj.IsDeleted = true;
+            obj.DeletedDate = DateTime.Now;
+            return Ok(Lst);
         }
     }
 }
